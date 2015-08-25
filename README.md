@@ -10,8 +10,10 @@ In Development.
 
 #### Usage 
 
+``go get github.com/kunalkushwaha/octool``
+
 ```
-$ ./octool
+$ octool
 NAME:
    octool - Toolchain for OpenContainer Format
 
@@ -34,7 +36,7 @@ GLOBAL OPTIONS:
 
 ##### example 
 ```
-$ ./octool  validate  --json ./bad.json
+$ octool  validate  --json ./bad.json
 0 Platform.Arch Can not be empty
 1 Mount.Source Can not be empty
 
@@ -44,7 +46,7 @@ Linux Specific config errors
 
 NOTE: One or more errors found in ./bad.json
 
-$ ./octool  validate  --json ./test.json
+$ octool  validate  --json ./test.json
 
  ./test.json has Valid OC Format !!
 
