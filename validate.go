@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"regexp"
 
 	"github.com/astaxie/beego/validation"
 	"github.com/codegangsta/cli"
@@ -33,7 +34,13 @@ func validateOCImage(c *cli.Context) {
 		fmt.Println("Error while opening File ", err)
 		return
 	}
-	config.ValidateCommonSpecs()
+	common := config.ValidateCommonSpecs()
+	platform := config.ValidateLinuxSpecs()
+	if !common || !platform {
+		fmt.Println("\nNOTE: One or more errors found in", configJson)
+	} else {
+		fmt.Println("\n",configJson, "has Valid OC Format !!")
+	}
 	//fmt.Println(config)
 	//	dumpJSON(config)
 	return
@@ -76,37 +83,64 @@ func NewConfig(path string) (Config, error) {
 
 func (conf *Config) ValidateCommonSpecs() bool {
 	valid := validation.Validation{}
+
+	//Validate mandatory fields.
 	valid.Required(conf.configLinux.Version, "Version")
+	//Version must complient with  SemVer v2.0.0
+	valid.Match(conf.configLinux.Version, regexp.MustCompile("^(\\d+\\.)?(\\d+\\.)?(\\*|\\d+)$"),"Version")
 	valid.Required(conf.configLinux.Platform.OS, "OS")
 	valid.Required(conf.configLinux.Platform.Arch, "Platform.Arch")
+
+	for _, env := range conf.configLinux.Process.Env {
+		//If Process defined, env cannot be empty
+		valid.Required(env, "Process.Env")
+	}
 	valid.Required(conf.configLinux.Process.User.UID, "User.UID")
 	valid.Required(conf.configLinux.Process.User.GID, "User.GID")
 	valid.Required(conf.configLinux.Root.Path, "Root.Path")
 	//Iterate over Mount array
-	//valid.Required(conf.configLinux.Mounts.Type, "Mount.Type")
-	//valid.Required(conf.configLinux.Mounts.Source, "Mount.Source")
-	//valid.Required(conf.configLinux.Mounts.Destination, "Mount.Destination")
+	for _, mount := range conf.configLinux.Mounts {
+		//If Mount points defined, it must define these three.
+		valid.Required(mount.Type, "Mount.Type")
+		valid.Required(mount.Source, "Mount.Source")
+		valid.Required(mount.Destination, "Mount.Destination")
+	}
 
 	if valid.HasErrors() {
 		// validation does not pass
-		// print invalid message
-		for _, err := range valid.Errors {
-			fmt.Println(err.Key, err.Message)
+		for i, err := range valid.Errors {
+			fmt.Println(i, err.Key, err.Message)
 		}
-		fmt.Println("\nNOTE: Try to fix errors from top\n",
-			"     as intital errors case parsing issue, resulting too many erorrs")
-
+		return false
 	}
 
-	return false
+	return true
 }
 
 func (conf *Config) ValidateLinuxSpecs() bool {
-	return false
+	valid := validation.Validation{}
+
+	for _, namespace := range conf.configLinux.Linux.Namespaces  {
+		valid.Required(namespace.Type, "Namespace.Type")
+	}
+
+
+	if valid.HasErrors() {
+		// validation does not pass
+		fmt.Println("\nLinux Specific config errors\n")
+
+		for i, err := range valid.Errors {
+			fmt.Println(i, err.Key, err.Message)
+		}
+		return false
+	}
+
+	return true
 }
 
 func (conf *Config) Analyze() {
-
+	fmt.Println("NOT-IMPLEMETED")
+	return
 }
 
 func testOContainer(c *cli.Context) {
