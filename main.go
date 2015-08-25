@@ -9,7 +9,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "octool"
-	app.Usage = "Toolchain for OpenContainer Specs"
+	app.Usage = "Toolchain for OpenContainer Format"
 	app.Version = "0.1.0"
 	app.Commands = []cli.Command{
 		{
@@ -18,7 +18,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "json",
-					Usage: "[Optional] dry_run the command",
+					Usage: "json config file to validate",
 				},
 			},
 			Action: validateOCImage,
