@@ -43,13 +43,19 @@ func main() {
 
 func validateOCImage(c *cli.Context) {
 	configJson := c.String("json")
-	//os := c.String("os")
+	os := c.String("os")
 
 	if len(configJson) == 0 {
 		cli.ShowCommandHelp(c, "validate")
 		return
 	}
-	plugin, err := plugin.NewPlugin("linux", "test.json")
+
+	if len(os) == 0 {
+		//FIXME: Instead of default as linux, detect os
+		os = "linux"
+	}
+
+	plugin, err := plugin.NewPlugin(os, configJson)
 	if err != nil {
 		fmt.Println(err)
 		return
