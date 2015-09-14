@@ -5,13 +5,14 @@ import (
 )
 
 type Plugin interface {
-	ValidatePluginSpecs() ([]string, bool)
+	ValidatePluginSpecs(string) ([]string, bool)
+	ValidatePluginRuntimeSpecs(string) ([]string, bool)
 	Analyze() []string
 	TestExecution() []string
 }
 
 type RegisteredPlugin struct {
-	New func(pluginName string, path string) (Plugin, error)
+	New func(pluginName string) (Plugin, error)
 }
 
 var (
@@ -33,10 +34,10 @@ func Register(name string, registeredPlugin *RegisteredPlugin) error {
 	return nil
 }
 
-func NewPlugin(name string, path string) (Plugin, error) {
+func NewPlugin(name string) (Plugin, error) {
 	plugin, exists := plugins[name]
 	if !exists {
 		return nil, fmt.Errorf("Plugin: Unknown plugin %q", name)
 	}
-	return plugin.New(name, path)
+	return plugin.New(name)
 }

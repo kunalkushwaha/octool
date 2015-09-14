@@ -15,6 +15,7 @@ import (
 
 type Plugin struct {
 	config   specs.LinuxSpec
+	runtime  specs.LinuxRuntimeSpec
 	errorLog []string
 }
 
@@ -23,23 +24,23 @@ func init() {
 		&plugin.RegisteredPlugin{New: NewPlugin})
 }
 
-func NewPlugin(pluginName string, path string) (plugin.Plugin, error) {
+func NewPlugin(pluginName string) (plugin.Plugin, error) {
+
+	return Plugin{}, nil
+}
+
+func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
+
+	validOCI := true
+	valid := validation.Validation{}
 
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Println("Erorr in reading file!!")
-		return Plugin{}, err
+		return p.errorLog, false
 	}
 
-	plugin := Plugin{}
-	json.Unmarshal(data, &plugin.config)
-	return plugin, nil
-}
-
-func (p Plugin) ValidatePluginSpecs() ([]string, bool) {
-
-	validOCI := true
-	valid := validation.Validation{}
+	json.Unmarshal(data, &p.config)
 
 	//Validate mandatory fields.
 	if result := valid.Required(p.config.Version, "Version"); !result.Ok {
@@ -62,23 +63,56 @@ func (p Plugin) ValidatePluginSpecs() ([]string, bool) {
 			p.errorLog = append(p.errorLog, "Process.Env is empty")
 		}
 	}
-	///	valid.Required(p.config.Process.User.UID, "User.UID")
-	//	valid.Required(p.config.Process.User.GID, "User.GID")
 	if result := valid.Required(p.config.Root.Path, "Root.Path"); !result.Ok {
 		p.errorLog = append(p.errorLog, "Root.Path is empty")
 	}
 	//Iterate over Mount array
-	//	for _, mount := range p.config.Mounts {
-	//If Mount points defined, it must define these three.
-	//valid.Required(mount.Type, "Mount.Type")
-	//		valid.Required(mount.Source, "Mount.Source")
-	//		valid.Required(mount.Destination, "Mount.Destination")
-	//	}
-	//fmt.Println(errorLog)
+	for _, mount := range p.config.Mounts {
+		//If Mount points defined, it must define these three.
+		if result := valid.Required(mount.Name, "Mount.Name"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Mount.Name is required")
+		}
+		if result := valid.Required(mount.Path, "Mount.Path"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Mount.Path is required")
+		}
+	}
 	if len(p.errorLog) > 0 {
 		validOCI = false
 	}
 	return p.errorLog, validOCI
+}
+
+func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
+	path := specs.LinuxStateDirectory + "/" + containerID
+	fmt.Println(path)
+
+	validOCIStatus := true
+	valid := validation.Validation{}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Println("Erorr in reading file!!")
+		return p.errorLog, false
+	}
+
+	json.Unmarshal(data, &p.runtime)
+
+	//Iterate over Mount array
+	for _, mount := range p.runtime.Mounts {
+		//If Mount points defined, it must define these three.
+		if result := valid.Required(mount.Type, "Mount.Type"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Mount.Type is empty")
+		}
+		if result := valid.Required(mount.Source, "Mount.Source"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Mount.Path is empty")
+		}
+	}
+
+	if len(p.errorLog) > 0 {
+		validOCIStatus = false
+	}
+
+	return p.errorLog, validOCIStatus
 }
 
 func (p Plugin) Analyze() []string {

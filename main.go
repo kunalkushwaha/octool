@@ -17,50 +17,60 @@ func main() {
 	app.Version = "0.1.0"
 	app.Commands = []cli.Command{
 		{
-			Name:  "validate",
-			Usage: "validate container image / Json",
+			Name:  "lint",
+			Usage: "validate container config file",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "json",
-					Usage: "json config file to validate",
+					Name:  "config",
+					Usage: "config file to validate [If not present, expects config.json in current folder]",
 				},
 				cli.StringFlag{
 					Name:  "os",
 					Usage: "Target OS",
 				},
 			},
-			Action: validateOCImage,
+			Action: validateContainerConfig,
 		},
 		{
-			Name:  "test",
-			Usage: "Test the Container",
-			//Action: testOContainer,
+			Name:  "validate-state",
+			Usage: "Validates the Container state",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "id",
+					Usage: "Container ID",
+				},
+			},
+			Action: validateContainerState,
 		},
 	}
 
 	app.Run(os.Args)
 }
 
-func validateOCImage(c *cli.Context) {
-	configJson := c.String("json")
-	os := c.String("os")
+func validateContainerConfig(c *cli.Context) {
+	configJson := c.String("config")
+	targetOS := c.String("os")
 
 	if len(configJson) == 0 {
-		cli.ShowCommandHelp(c, "validate")
-		return
+		configJson = "config.json"
+		_, err := os.Stat(configJson)
+		if os.IsNotExist(err) {
+			cli.ShowCommandHelp(c, "lint")
+			return
+		}
 	}
 
-	if len(os) == 0 {
+	if len(targetOS) == 0 {
 		//FIXME: Instead of default as linux, detect os
-		os = "linux"
+		targetOS = "linux"
 	}
 
-	plugin, err := plugin.NewPlugin(os, configJson)
+	plugin, err := plugin.NewPlugin(targetOS)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	errors, valid := plugin.ValidatePluginSpecs()
+	errors, valid := plugin.ValidatePluginSpecs(configJson)
 	if !valid {
 		for _, err := range errors {
 			fmt.Println(err)
@@ -70,4 +80,32 @@ func validateOCImage(c *cli.Context) {
 	}
 	return
 
+}
+
+func validateContainerState(c *cli.Context) {
+	containerID := c.String("id")
+
+	if len(containerID) == 0 {
+		cli.ShowCommandHelp(c, "validate-state")
+		return
+	}
+
+	//FIXME: Instead of default as linux, detect os
+	targetOS := "linux"
+
+	plugin, err := plugin.NewPlugin(targetOS)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	errors, valid := plugin.ValidatePluginRuntimeSpecs(containerID)
+	if !valid {
+		for _, err := range errors {
+			fmt.Println(err)
+		}
+	} else {
+		fmt.Println("Container State Valid OCI")
+	}
+
+	return
 }

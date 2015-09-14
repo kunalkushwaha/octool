@@ -10,18 +10,22 @@ func init() {
 		&plugin.RegisteredPlugin{New: NewPlugin})
 }
 
-func NewPlugin(pluginName string, path string) (plugin.Plugin, error) {
+func NewPlugin(pluginName string) (plugin.Plugin, error) {
 	return &Plugin{}, nil
 }
 
-func (p *Plugin) ValidatePluginSpecs() ([]string, bool) {
-	return []string{"none", "one"}, true
+func (p *Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
+	return []string{}, true
+}
+
+func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
+	return []string{}, true
 }
 
 func (p *Plugin) Analyze() []string {
-	return []string{"none", "two"}
+	return []string{}
 }
 
 func (p *Plugin) TestExecution() []string {
-	return []string{"none", "three"}
+	return []string{}
 }
