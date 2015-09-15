@@ -82,9 +82,12 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 	return p.errorLog, validOCI
 }
 
+//FIXME: Still runc has not implemented the changes, so state.json
+//	 file has diffrent structure, so cannot verify.
+//	Implementtion incomplete.
 func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
-	path := specs.LinuxStateDirectory + "/" + containerID
-	fmt.Println(path)
+	path := specs.LinuxStateDirectory + "/" + containerID + "/state.json"
+	//path := "/run/oci" + "/" + containerID + "/state.json"
 
 	validOCIStatus := true
 	valid := validation.Validation{}
@@ -117,15 +120,28 @@ func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) 
 
 func (p Plugin) Analyze() []string {
 	fmt.Println("none: Analyze() ")
-	return []string{"none", "two"}
+	return p.errorLog
 }
 
 func (p Plugin) TestExecution() []string {
 	fmt.Println("none: TestExecution() ")
-	return []string{"none", "three"}
+	return p.errorLog
 }
 
-func dumpJSON(config Plugin) {
+// Debugging functions.
+func dumpConfig(config specs.LinuxSpec) {
+	b, err := json.Marshal(config)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	var out bytes.Buffer
+	json.Indent(&out, b, "", "\t")
+	out.WriteTo(os.Stdout)
+	fmt.Println("")
+}
+
+func dumpRuntimeConfig(config specs.LinuxRuntimeSpec) {
 	b, err := json.Marshal(config)
 	if err != nil {
 		fmt.Println(err)
