@@ -60,7 +60,8 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 	for _, env := range p.config.Process.Env {
 		//If Process defined, env cannot be empty
 		if result := valid.Required(env, "Process.Env"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Process.Env is empty")
+			p.errorLog = append(p.errorLog, "Atleast one Process.Env is empty")
+			break
 		}
 	}
 	if result := valid.Required(p.config.Root.Path, "Root.Path"); !result.Ok {
@@ -70,14 +71,17 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 	for _, mount := range p.config.Mounts {
 		//If Mount points defined, it must define these three.
 		if result := valid.Required(mount.Name, "Mount.Name"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Mount.Name is required")
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Name is empty")
+			break
 		}
 		if result := valid.Required(mount.Path, "Mount.Path"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Mount.Path is required")
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Path is empty")
+			break
 		}
 	}
 	if len(p.errorLog) > 0 {
 		validOCI = false
+		p.errorLog = append(p.errorLog, "NOTE: Some errors may appear due to invalid OCI format")
 	}
 	return p.errorLog, validOCI
 }
@@ -86,8 +90,8 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 //	 file has diffrent structure, so cannot verify.
 //	Implementtion incomplete.
 func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
-	path := specs.LinuxStateDirectory + "/" + containerID + "/state.json"
-	//path := "/run/oci" + "/" + containerID + "/state.json"
+	//path := "./runtime.json"
+	path := "/run/oci" + "/" + containerID + "/state.json"
 
 	validOCIStatus := true
 	valid := validation.Validation{}
@@ -113,6 +117,7 @@ func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) 
 
 	if len(p.errorLog) > 0 {
 		validOCIStatus = false
+		p.errorLog = append(p.errorLog, "NOTE: Some errors may appear due to invalid OCI format")
 	}
 
 	return p.errorLog, validOCIStatus

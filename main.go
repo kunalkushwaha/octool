@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	 log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/kunalkushwaha/octool/plugins"
 	_ "github.com/kunalkushwaha/octool/plugins/linux"
 )
 
 func main() {
-
+	log.SetLevel(log.WarnLevel)
 	app := cli.NewApp()
 	app.Name = "octool"
 	app.Usage = "Toolchain for OpenContainer Format"
@@ -67,14 +68,17 @@ func validateContainerConfig(c *cli.Context) {
 
 	plugin, err := plugin.NewPlugin(targetOS)
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
+		log.Error(err)
 		return
 	}
 	errors, valid := plugin.ValidatePluginSpecs(configJson)
 	if !valid {
 		for _, err := range errors {
-			fmt.Println(err)
+			log.Warn(err)
+			//fmt.Println(err)
 		}
+			fmt.Printf("\nInvalid OCI config format\n")
 	} else {
 		fmt.Println("Config is Valid OCI")
 	}
@@ -95,14 +99,17 @@ func validateContainerState(c *cli.Context) {
 
 	plugin, err := plugin.NewPlugin(targetOS)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
+		//fmt.Println(err)
 		return
 	}
 	errors, valid := plugin.ValidatePluginRuntimeSpecs(containerID)
 	if !valid {
 		for _, err := range errors {
-			fmt.Println(err)
+			//fmt.Println(err)
+			log.Warn(err)
 		}
+			fmt.Printf("\nInvalid OCI runtime format\n")
 	} else {
 		fmt.Println("Container State Valid OCI")
 	}
