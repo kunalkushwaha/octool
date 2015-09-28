@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	 log "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/kunalkushwaha/octool/plugins"
 	_ "github.com/kunalkushwaha/octool/plugins/linux"
 )
 
 func main() {
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.InfoLevel)
 	app := cli.NewApp()
 	app.Name = "octool"
 	app.Usage = "Toolchain for OpenContainer Format"
@@ -19,14 +19,16 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:  "lint",
-			Usage: "validate container config file",
+			Usage: "validate container config file(s)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "config",
-					Usage: "config file to validate [If not present, expects config.json in current folder]",
+					Name:  "image",
+					Value: ".",
+					Usage: "path of image to validate",
 				},
 				cli.StringFlag{
 					Name:  "os",
+					Value: "linux",
 					Usage: "Target OS",
 				},
 			},
@@ -49,22 +51,15 @@ func main() {
 }
 
 func validateContainerConfig(c *cli.Context) {
-	configJson := c.String("config")
+	imagePath := c.String("image")
 	targetOS := c.String("os")
 
-	if len(configJson) == 0 {
-		configJson = "config.json"
-		_, err := os.Stat(configJson)
-		if os.IsNotExist(err) {
-			cli.ShowCommandHelp(c, "lint")
-			return
-		}
+	_, err := os.Stat(imagePath)
+	if os.IsNotExist(err) {
+		cli.ShowCommandHelp(c, "lint")
+		return
 	}
-
-	if len(targetOS) == 0 {
-		//FIXME: Instead of default as linux, detect os
-		targetOS = "linux"
-	}
+	//FIXME: Instead of default as linux, detect os
 
 	plugin, err := plugin.NewPlugin(targetOS)
 	if err != nil {
@@ -72,15 +67,16 @@ func validateContainerConfig(c *cli.Context) {
 		log.Error(err)
 		return
 	}
-	errors, valid := plugin.ValidatePluginSpecs(configJson)
+	errors, valid := plugin.ValidatePluginSpecs(imagePath)
 	if !valid {
+		fmt.Println("")
 		for _, err := range errors {
 			log.Warn(err)
 			//fmt.Println(err)
 		}
-			fmt.Printf("\nInvalid OCI config format\n")
+		fmt.Printf("\nInvalid OCI config format\n")
 	} else {
-		fmt.Println("Config is Valid OCI")
+		fmt.Printf("\nConfig is Valid OCI\n")
 	}
 	return
 
@@ -109,7 +105,7 @@ func validateContainerState(c *cli.Context) {
 			//fmt.Println(err)
 			log.Warn(err)
 		}
-			fmt.Printf("\nInvalid OCI runtime format\n")
+		fmt.Printf("\nInvalid OCI runtime format\n")
 	} else {
 		fmt.Println("Container State Valid OCI")
 	}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/astaxie/beego/validation"
 	"github.com/kunalkushwaha/octool/plugins"
 	"github.com/opencontainers/specs"
@@ -29,15 +30,12 @@ func NewPlugin(pluginName string) (plugin.Plugin, error) {
 	return Plugin{}, nil
 }
 
-func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
-
-	validOCI := true
+func (p *Plugin) validateConfigSpecs(path string) bool {
 	valid := validation.Validation{}
 
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Println("Erorr in reading file!!")
-		return p.errorLog, false
+		return false
 	}
 
 	json.Unmarshal(data, &p.config)
@@ -79,27 +77,16 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 			break
 		}
 	}
-	if len(p.errorLog) > 0 {
-		validOCI = false
-		p.errorLog = append(p.errorLog, "NOTE: Some errors may appear due to invalid OCI format")
-	}
-	return p.errorLog, validOCI
+
+	return true
 }
 
-//FIXME: Still runc has not implemented the changes, so state.json
-//	 file has diffrent structure, so cannot verify.
-//	Implementtion incomplete.
-func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
-	//path := "./runtime.json"
-	path := "/run/oci" + "/" + containerID + "/state.json"
-
-	validOCIStatus := true
+func (p *Plugin) validateRuntimeSpecs(path string) bool {
 	valid := validation.Validation{}
 
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Println("Erorr in reading file!!")
-		return p.errorLog, false
+		return false
 	}
 
 	json.Unmarshal(data, &p.runtime)
@@ -108,12 +95,95 @@ func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) 
 	for _, mount := range p.runtime.Mounts {
 		//If Mount points defined, it must define these three.
 		if result := valid.Required(mount.Type, "Mount.Type"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Mount.Type is empty")
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Type is empty")
+			break
 		}
 		if result := valid.Required(mount.Source, "Mount.Source"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Mount.Path is empty")
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Source is empty")
+			break
 		}
 	}
+	// Hooks Prestart
+	for _, hook := range p.runtime.Hooks.Prestart {
+		if result := valid.Required(hook.Path, "Hooks.Path"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Prestart hook Path cannot be empty")
+			break
+		}
+	}
+
+	// Hooks Poststop
+	for _, hook := range p.runtime.Hooks.Poststop {
+		if result := valid.Required(hook.Path, "Hooks.Path"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Poststop hook Path cannot be empty")
+			break
+		}
+	}
+
+	// UIDMappings mapping check.
+	for _, uid := range p.runtime.Linux.UIDMappings {
+		if result := valid.Range(uid.HostID, 0, 2147483647, "IDMapping.HostID"); !result.Ok {
+			p.errorLog = append(p.errorLog, "UIDMapping's HostID must be valid integer")
+			break
+		}
+		if result := valid.Range(uid.ContainerID, 0, 2147483647, "IDMapping.ContainerID"); !result.Ok {
+			p.errorLog = append(p.errorLog, "UIDMapping's ContainerID must be valid integer")
+			break
+		}
+		if result := valid.Range(uid.Size, 0, 2147483647, "IDMapping.Size"); !result.Ok {
+			p.errorLog = append(p.errorLog, "UIDMapping's Size must be valid integer")
+			break
+		}
+	}
+
+	// GIDMappings mapping check.
+	for _, gid := range p.runtime.Linux.GIDMappings {
+		if result := valid.Range(gid.HostID, 0, 2147483647, "IDMapping.HostID"); !result.Ok {
+			p.errorLog = append(p.errorLog, "GIDMapping's HostID must be valid integer")
+			break
+		}
+		if result := valid.Range(gid.ContainerID, 0, 2147483647, "IDMapping.ContainerID"); !result.Ok {
+			p.errorLog = append(p.errorLog, "GIDMapping's ContainerID must be valid integer")
+			break
+		}
+		if result := valid.Range(gid.Size, 0, 2147483647, "IDMapping.Size"); !result.Ok {
+			p.errorLog = append(p.errorLog, "GIDMapping's Size must be valid integer")
+			break
+		}
+	}
+
+	return true
+}
+
+func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
+
+	validOCI := true
+
+	if !p.validateConfigSpecs(path + "/config.json") {
+		validOCI = false
+		log.Errorf("Unable to Validate config.json")
+	}
+	if !p.validateRuntimeSpecs(path + "/runtime.json") {
+		validOCI = false
+		log.Errorf("Unable to Validate runtime.json")
+	}
+
+	if len(p.errorLog) > 0 {
+		validOCI = false
+		//p.errorLog = append(p.errorLog, "NOTE: Some errors may appear due to invalid OCI format")
+		log.Info("NOTE: Some errors may appear due to invalid OCI format")
+	}
+
+	return p.errorLog, validOCI
+}
+
+//FIXME: Still runc has not implemented the changes, so state.json
+//	 file has diffrent structure, so cannot verify.
+//	Implementtion incomplete.
+func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
+	//path := "./runtime.json"
+	//path := "/run/oci" + "/" + containerID + "/state.json"
+
+	validOCIStatus := true
 
 	if len(p.errorLog) > 0 {
 		validOCIStatus = false

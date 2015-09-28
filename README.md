@@ -40,6 +40,6 @@ $  octool lint
 
 OR
 
-$ octool lint --config /home/test/container/config.json  --os linux
+$ octool lint --image /home/test/container/  --os linux
 
 ```
