@@ -99,13 +99,13 @@ func validateContainerState(c *cli.Context) {
 		//fmt.Println(err)
 		return
 	}
-	errors, valid := plugin.ValidatePluginRuntimeSpecs(containerID)
+	errors, valid := plugin.ValidatePluginState(containerID)
 	if !valid {
 		for _, err := range errors {
 			//fmt.Println(err)
 			log.Warn(err)
 		}
-		fmt.Printf("\nInvalid OCI runtime format\n")
+		fmt.Printf("\nInvalid OCI State format\n")
 	} else {
 		fmt.Println("Container State Valid OCI")
 	}

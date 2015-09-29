@@ -6,7 +6,7 @@ import (
 
 type Plugin interface {
 	ValidatePluginSpecs(string) ([]string, bool)
-	ValidatePluginRuntimeSpecs(string) ([]string, bool)
+	ValidatePluginState(string) ([]string, bool)
 	Analyze() []string
 	TestExecution() []string
 }

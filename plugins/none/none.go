@@ -18,7 +18,7 @@ func (p *Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 	return []string{}, true
 }
 
-func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
+func (p Plugin) ValidatePluginState(containerID string) ([]string, bool) {
 	return []string{}, true
 }
 

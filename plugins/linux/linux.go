@@ -177,11 +177,18 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 }
 
 //FIXME: Still runc has not implemented the changes, so state.json
-//	 file has diffrent structure, so cannot verify.
 //	Implementtion incomplete.
-func (p Plugin) ValidatePluginRuntimeSpecs(containerID string) ([]string, bool) {
-	//path := "./runtime.json"
+func (p Plugin) ValidatePluginState(containerID string) ([]string, bool) {
+	path := "/run/opencontainer/containers/" + containerID + "/state.json"
 	//path := "/run/oci" + "/" + containerID + "/state.json"
+
+	_, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Error("Container not running")
+		return p.errorLog, false
+	}
+
+	//	json.Unmarshal(data, &p.State)
 
 	validOCIStatus := true
 
