@@ -240,6 +240,7 @@ func generateSpec(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println("Error while writing config file : ", err)
 	}
+	fmt.Printf("\nSuccesfully generated config.json\n")
 }
 
 func sPtr(s string) *string { return &s }

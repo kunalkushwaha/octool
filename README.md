@@ -4,42 +4,53 @@ OpenContainer tool set for image validation, analysis and test.
 #### Current Status
 In Development.
 ##### Feature wise status
-- lint  : Completed.
+- import : Docker Registry supported
+- spec   : Completed (Docker Manifest to OCI's confg.json)
+- lint   : Completed.
 - validate-state   : Pending for runc implementation.
 
-#### Usage 
+#### Usage
 
 ``go get github.com/kunalkushwaha/octool``
 
 ```
 $ octool
-NAME:
-   octool - Toolchain for OpenContainer Format
+Toolchain for OpenContainer Format(OCI)
 
-USAGE:
-   octool [global options] command [command options] [arguments...]
+Usage:
+  octool [command]
 
-VERSION:
-   0.1.0
+Available Commands:
+  import         Imports container image from remote registery and convert it to runc's rootfs
+  lint           validate container config file(s)
+  spec           genrates runc compatible spec from manifest file
+  validate-state Validates the Container state
 
-COMMANDS:
-   lint                 validate container config file
-   validate-state       Validates the Container state
-   help, h              Shows a list of commands or help for one command
+Flags:
+  -h, --help   help for octool
 
-GLOBAL OPTIONS:
-   --help, -h           show help
-   --version, -v        print the version
+Use "octool [command] --help" for more information about a command.
+
 
 
 ```
 
-##### example 
+##### example
 ```
-$  octool lint
+octool import docker://kunalkushwaha/demoapp_image:v1 -t demoapp
+rootfs is prepared at : demoapp/rootfs
 
-OR
+$ cd demoapp
 
-$ octool lint --image /home/test/container/  --os linux
+$ octool spec
+
+Succesfully generated config.json
+
+$ octool lint
+INFO[0000] NOTE: Some errors may appear due to invalid OCI format
+
+WARN[0000] Version must be in format of X.X.X (complient to Semver v2.0.0)
+
+Invalid OCI config format
 
 ```
