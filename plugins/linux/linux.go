@@ -11,12 +11,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/astaxie/beego/validation"
 	"github.com/kunalkushwaha/octool/plugins"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Plugin struct {
-	config   specs.LinuxSpec
-	runtime  specs.LinuxRuntimeSpec
+	config specs.Spec
+	//	runtime  specs.LinuxRuntimeSpec
 	errorLog []string
 }
 
@@ -68,31 +68,18 @@ func (p *Plugin) validateConfigSpecs(path string) bool {
 	//Iterate over Mount array
 	for _, mount := range p.config.Mounts {
 		//If Mount points defined, it must define these three.
-		if result := valid.Required(mount.Name, "Mount.Name"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Atleast one Mount.Name is empty")
+		if result := valid.Required(mount.Source, "Mount.Source"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Source is empty")
 			break
 		}
-		if result := valid.Required(mount.Path, "Mount.Path"); !result.Ok {
-			p.errorLog = append(p.errorLog, "Atleast one Mount.Path is empty")
+		if result := valid.Required(mount.Destination, "Mount.Destination"); !result.Ok {
+			p.errorLog = append(p.errorLog, "Atleast one Mount.Destination is empty")
 			break
 		}
 	}
-
-	return true
-}
-
-func (p *Plugin) validateRuntimeSpecs(path string) bool {
-	valid := validation.Validation{}
-
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return false
-	}
-
-	json.Unmarshal(data, &p.runtime)
 
 	//Iterate over Mount array
-	for _, mount := range p.runtime.Mounts {
+	for _, mount := range p.config.Mounts {
 		//If Mount points defined, it must define these three.
 		if result := valid.Required(mount.Type, "Mount.Type"); !result.Ok {
 			p.errorLog = append(p.errorLog, "Atleast one Mount.Type is empty")
@@ -104,7 +91,7 @@ func (p *Plugin) validateRuntimeSpecs(path string) bool {
 		}
 	}
 	// Hooks Prestart
-	for _, hook := range p.runtime.Hooks.Prestart {
+	for _, hook := range p.config.Hooks.Prestart {
 		if result := valid.Required(hook.Path, "Hooks.Path"); !result.Ok {
 			p.errorLog = append(p.errorLog, "Prestart hook Path cannot be empty")
 			break
@@ -112,7 +99,7 @@ func (p *Plugin) validateRuntimeSpecs(path string) bool {
 	}
 
 	// Hooks Poststop
-	for _, hook := range p.runtime.Hooks.Poststop {
+	for _, hook := range p.config.Hooks.Poststop {
 		if result := valid.Required(hook.Path, "Hooks.Path"); !result.Ok {
 			p.errorLog = append(p.errorLog, "Poststop hook Path cannot be empty")
 			break
@@ -120,7 +107,7 @@ func (p *Plugin) validateRuntimeSpecs(path string) bool {
 	}
 
 	// UIDMappings mapping check.
-	for _, uid := range p.runtime.Linux.UIDMappings {
+	for _, uid := range p.config.Linux.UIDMappings {
 		if result := valid.Range(uid.HostID, 0, 2147483647, "IDMapping.HostID"); !result.Ok {
 			p.errorLog = append(p.errorLog, "UIDMapping's HostID must be valid integer")
 			break
@@ -136,7 +123,7 @@ func (p *Plugin) validateRuntimeSpecs(path string) bool {
 	}
 
 	// GIDMappings mapping check.
-	for _, gid := range p.runtime.Linux.GIDMappings {
+	for _, gid := range p.config.Linux.GIDMappings {
 		if result := valid.Range(gid.HostID, 0, 2147483647, "IDMapping.HostID"); !result.Ok {
 			p.errorLog = append(p.errorLog, "GIDMapping's HostID must be valid integer")
 			break
@@ -151,6 +138,8 @@ func (p *Plugin) validateRuntimeSpecs(path string) bool {
 		}
 	}
 
+	//TODO: CHeck Capablities.
+
 	return true
 }
 
@@ -162,11 +151,11 @@ func (p Plugin) ValidatePluginSpecs(path string) ([]string, bool) {
 		validOCI = false
 		log.Errorf("Unable to Validate config.json")
 	}
-	if !p.validateRuntimeSpecs(path + "/runtime.json") {
-		validOCI = false
-		log.Errorf("Unable to Validate runtime.json")
-	}
-
+	/*	if !p.validateRuntimeSpecs(path + "/runtime.json") {
+			validOCI = false
+			log.Errorf("Unable to Validate runtime.json")
+		}
+	*/
 	if len(p.errorLog) > 0 {
 		validOCI = false
 		//p.errorLog = append(p.errorLog, "NOTE: Some errors may appear due to invalid OCI format")
@@ -211,19 +200,7 @@ func (p Plugin) TestExecution() []string {
 }
 
 // Debugging functions.
-func dumpConfig(config specs.LinuxSpec) {
-	b, err := json.Marshal(config)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "\t")
-	out.WriteTo(os.Stdout)
-	fmt.Println("")
-}
-
-func dumpRuntimeConfig(config specs.LinuxRuntimeSpec) {
+func dumpConfig(config specs.Spec) {
 	b, err := json.Marshal(config)
 	if err != nil {
 		fmt.Println(err)
