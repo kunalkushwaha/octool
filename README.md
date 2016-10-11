@@ -37,20 +37,50 @@ Use "octool [command] --help" for more information about a command.
 
 ##### example
 ```
-octool import docker://kunalkushwaha/demoapp_image:v1 -t demoapp
+$ octool import docker://kunalkushwaha/demoapp_image:v1 -t demoapp
 rootfs is prepared at : demoapp/rootfs
 
 $ cd demoapp
+
+$ tree -L 2
+.
+├── config.json
+├── manifest.json
+└── rootfs
+    ├── bin
+    ├── dev
+    ├── etc
+    ├── home
+    ├── lib
+    ├── linuxrc -> /bin/busybox
+    ├── media
+    ├── mnt
+    ├── proc
+    ├── root
+    ├── run
+    ├── sbin
+    ├── srv
+    ├── sys
+    ├── tmp
+    ├── usr
+    └── var
+
+17 directories, 3 files
 
 $ octool spec
 
 Succesfully generated config.json
 
-$ octool lint
-INFO[0000] NOTE: Some errors may appear due to invalid OCI format
+$ octool lint    
 
-WARN[0000] Version must be in format of X.X.X (complient to Semver v2.0.0)
+Config is Valid OCI
 
-Invalid OCI config format
+$ cd demoapp
+
+$ sudo runc run test
+/ # ls
+bin      etc      lib      media    proc     run      srv      tmp      var
+dev      home     linuxrc  mnt      root     sbin     sys      usr
+
 
 ```

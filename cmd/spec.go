@@ -37,7 +37,7 @@ type ImageInspect struct {
 
 var (
 	spec = specs.Spec{
-		Version: specs.Version,
+		Version: "1.0.0",
 		Platform: specs.Platform{
 			OS:   runtime.GOOS,
 			Arch: runtime.GOARCH,
